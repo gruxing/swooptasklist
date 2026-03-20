@@ -554,6 +554,7 @@ function renderWinEditForm(win) {
 // ─── init ─────────────────────────────────────────────────────────────────────
 function init() {
   state.name = localStorage.getItem("calm-todo-name")||"";
+  let initialLoad = true;
 
   dbListen("tasks", data => {
     state.tasks = data||{};
@@ -563,12 +564,14 @@ function init() {
         await dbSet("tasks/"+task.id, task);
       });
     }
-    render();
+    if (initialLoad) { render(); initialLoad = false; }
+    else renderList();
   });
 
   dbListen("wins", data => {
     state.wins = data||{};
-    render();
+    if (initialLoad) render();
+    else renderList();
   });
 }
 

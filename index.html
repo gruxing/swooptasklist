@@ -204,6 +204,40 @@ function renderList() {
   else area.appendChild(renderWinsView());
 }
 
+// re-renders stats and donut without touching the search input or list
+function renderStats() {
+  const tasks  = Object.values(state.tasks);
+  const wins   = Object.values(state.wins);
+  const todayW = wins.filter(w=>new Date(w.completedAt).toDateString()===new Date().toDateString()).length;
+  const weekW  = wins.filter(w=>(Date.now()-new Date(w.completedAt))<7*86400000).length;
+
+  const statsEl = document.getElementById("stats-area");
+  if (statsEl) {
+    statsEl.innerHTML = "";
+    [[tasks.length,"to do"],[todayW,"done today"],[weekW,"this week"]].forEach(([n,l])=>{
+      const s = el("div",{className:"stat"});
+      s.append(el("div",{className:"stat-n"},String(n)), el("div",{className:"stat-l"},l));
+      statsEl.appendChild(s);
+    });
+  }
+
+  const donutEl = document.getElementById("donut-area");
+  if (donutEl) {
+    donutEl.innerHTML = "";
+    donutEl.appendChild(renderDonut(tasks.length, wins.length));
+  }
+
+  const tabsEl = document.getElementById("tabs-area");
+  if (tabsEl) {
+    tabsEl.innerHTML = "";
+    ["tasks","wins"].forEach(v => {
+      const lbl = v==="tasks" ? "Tasks" : "Wins log"+(wins.length>0?" ("+wins.length+")":"");
+      const t = el("button",{className:"tab"+(state.view===v?" active":""), onClick:()=>{ state.view=v; render(); }}, lbl);
+      tabsEl.appendChild(t);
+    });
+  }
+}
+
 // ─── name screen ─────────────────────────────────────────────────────────────
 function renderNameScreen() {
   const wrap = el("div", {style:{maxWidth:"420px",margin:"0 auto",paddingTop:"3rem"}});
@@ -268,7 +302,7 @@ function renderMain() {
   wrap.appendChild(hdr);
 
   // stats
-  const statsEl = el("div",{className:"stats"});
+  const statsEl = el("div",{className:"stats", id:"stats-area"});
   [[tasks.length,"to do"],[todayW,"done today"],[weekW,"this week"]].forEach(([n,l])=>{
     const s = el("div",{className:"stat"});
     s.append(el("div",{className:"stat-n"},String(n)), el("div",{className:"stat-l"},l));
@@ -277,7 +311,9 @@ function renderMain() {
   wrap.appendChild(statsEl);
 
   // donut
-  wrap.appendChild(renderDonut(tasks.length, wins.length));
+  const donutArea = el("div",{id:"donut-area"});
+  donutArea.appendChild(renderDonut(tasks.length, wins.length));
+  wrap.appendChild(donutArea);
 
   // search — updates list-area directly, never calls render()
   const searchWrap = el("div",{className:"search-wrap"});
@@ -292,7 +328,7 @@ function renderMain() {
   wrap.appendChild(searchWrap);
 
   // tabs
-  const tabsEl = el("div",{className:"tabs"});
+  const tabsEl = el("div",{className:"tabs", id:"tabs-area"});
   ["tasks","wins"].forEach(v => {
     const lbl = v==="tasks" ? "Tasks" : "Wins log"+(wins.length>0?" ("+wins.length+")":"");
     const t = el("button",{className:"tab"+(state.view===v?" active":""), onClick:()=>{ state.view=v; render(); }}, lbl);
@@ -565,13 +601,13 @@ function init() {
       });
     }
     if (initialLoad) { render(); initialLoad = false; }
-    else renderList();
+    else { renderStats(); renderList(); }
   });
 
   dbListen("wins", data => {
     state.wins = data||{};
     if (initialLoad) render();
-    else renderList();
+    else { renderStats(); renderList(); }
   });
 }
 
